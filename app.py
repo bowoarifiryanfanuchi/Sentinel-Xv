@@ -80,7 +80,7 @@ if uploaded_file is not None and not st.session_state.analysis_done:
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            batch_size = 25
+            batch_size = 10
             total_rows = len(df)
             all_results = []
             

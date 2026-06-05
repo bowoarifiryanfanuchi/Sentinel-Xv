@@ -7,8 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize the GenAI client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Initialize the GenAI client with stripped API key to prevent UI copy-paste newline issues
+raw_api_key = os.getenv("GEMINI_API_KEY", "")
+clean_api_key = raw_api_key.replace('\n', '').replace('\r', '').replace('"', '').strip()
+client = genai.Client(api_key=clean_api_key)
 
 # Use Gemini 2.5 Flash as the latest recommended model
 model_name = 'gemini-3.1-flash-lite'

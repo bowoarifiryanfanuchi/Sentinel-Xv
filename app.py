@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
 import streamlit.components.v1 as components
 from llm import process_batch_with_llm
+import concurrent.futures
 
 st.set_page_config(page_title="Sentinel-X Dashboard", page_icon="🕵️", layout="wide")
 
@@ -83,36 +84,48 @@ if uploaded_file is not None and not st.session_state.analysis_done:
             total_rows = len(df)
             all_results = []
             
-            # PROSES BATCH
-            for start_idx in range(0, total_rows, batch_size):
-                end_idx = min(start_idx + batch_size, total_rows)
-                batch_df = df.iloc[start_idx:end_idx]
-                status_text.markdown(f"**Status:** Menganalisis baris {start_idx + 1} hingga {end_idx} dari {total_rows}...")
+            # Mempersiapkan batasan batch
+            batches = [df.iloc[i:min(i + batch_size, total_rows)] for i in range(0, total_rows, batch_size)]
+            completed_rows = 0
+            
+            status_text.markdown(f"**Status:** Memulai analisis paralel untuk {total_rows} baris...")
+            
+            # PROSES BATCH SECARA PARALEL (Maksimal 5 jalur sekaligus)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                # Mengirim semua batch ke AI secara bersamaan
+                future_to_batch = {executor.submit(process_batch_with_llm, batch): batch for batch in batches}
                 
-                llm_results = process_batch_with_llm(batch_df)
-                llm_dict = {item.get('row_id'): item for item in llm_results}
-                
-                for _, row in batch_df.iterrows():
-                    row_id = row['row_id']
-                    res = llm_dict.get(row_id, {})
+                for future in concurrent.futures.as_completed(future_to_batch):
+                    batch_df = future_to_batch[future]
+                    try:
+                        llm_results = future.result()
+                        llm_dict = {item.get('row_id'): item for item in llm_results}
+                        
+                        for _, row in batch_df.iterrows():
+                            row_id = row['row_id']
+                            res = llm_dict.get(row_id, {})
+                            
+                            row_data = row.to_dict()
+                            row_data['Sentiment'] = res.get('primary_sentiment', 'Netral')
+                            row_data['Emotion'] = res.get('emotion', 'Netral')
+                            row_data['Narrative_Category'] = res.get('narrative_category', 'Tanpa Kategori')
+                            row_data['Actor_Type'] = res.get('actor_type', 'Organik')
+                            
+                            attacked = res.get('attacked_entities', [])
+                            defended = res.get('defended_entities', [])
+                            hashtags = res.get('hashtags', [])
+                            
+                            row_data['Attacked_Entities'] = ", ".join(attacked) if isinstance(attacked, list) else ""
+                            row_data['Defended_Entities'] = ", ".join(defended) if isinstance(defended, list) else ""
+                            row_data['Hashtags_Extracted'] = ", ".join(hashtags) if isinstance(hashtags, list) else ""
+                            
+                            all_results.append(row_data)
+                    except Exception as e:
+                        pass # Jika ada error ekstrem, lewati saja batch ini
                     
-                    row_data = row.to_dict()
-                    row_data['Sentiment'] = res.get('primary_sentiment', 'Netral')
-                    row_data['Emotion'] = res.get('emotion', 'Netral')
-                    row_data['Narrative_Category'] = res.get('narrative_category', 'Tanpa Kategori')
-                    row_data['Actor_Type'] = res.get('actor_type', 'Organik')
-                    
-                    attacked = res.get('attacked_entities', [])
-                    defended = res.get('defended_entities', [])
-                    hashtags = res.get('hashtags', [])
-                    
-                    row_data['Attacked_Entities'] = ", ".join(attacked) if isinstance(attacked, list) else ""
-                    row_data['Defended_Entities'] = ", ".join(defended) if isinstance(defended, list) else ""
-                    row_data['Hashtags_Extracted'] = ", ".join(hashtags) if isinstance(hashtags, list) else ""
-                    
-                    all_results.append(row_data)
-                    
-                progress_bar.progress(end_idx / total_rows)
+                    completed_rows += len(batch_df)
+                    progress_bar.progress(min(completed_rows / total_rows, 1.0))
+                    status_text.markdown(f"**Status:** Selesai menganalisis {completed_rows} dari {total_rows} baris... ⚡(Mode Cepat)")
                 
             # SNA GRAPH GENERATION
             status_text.markdown("**Status:** Membangun grafik jaringan (SNA)...")

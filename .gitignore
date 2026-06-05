@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.streamlit/
+test_api.py
+dataset.xlsx
+dataset.csv
+error_log.txt
+*.gexf
+*.html

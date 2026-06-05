@@ -1,0 +1,13 @@
+pandas
+openpyxl
+tenacity
+psycopg2-binary
+sqlalchemy
+google-genai
+networkx
+python-dotenv
+streamlit
+plotly
+wordcloud
+matplotlib
+pyvis

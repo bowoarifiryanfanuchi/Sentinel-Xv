@@ -100,8 +100,16 @@ def call_llm_api(prompt_text):
             "Authorization": f"Bearer {provider['client']}",
             "Content-Type": "application/json"
         }
+        
+        # OpenRouter punya akses gratis ke banyak model elit. Kita acak agar tidak gampang limit!
+        openrouter_models = [
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "qwen/qwen-2.5-72b-instruct:free",
+            "google/gemini-2.0-flash-exp:free"
+        ]
+        
         data = {
-            "model": "meta-llama/llama-3.3-70b-instruct:free",
+            "model": random.choice(openrouter_models),
             "messages": [
                 {"role": "user", "content": prompt_text}
             ],

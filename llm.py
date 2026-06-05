@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import requests
 from google import genai
 from google.genai import types
 from groq import Groq
@@ -32,6 +33,16 @@ for k in groq_keys_raw.split(','):
     clean_k = k.replace('\n', '').replace('\r', '').replace('"', '').strip()
     if clean_k:
         providers.append({"type": "groq", "client": Groq(api_key=clean_k)})
+
+# 3. Load OpenRouter Keys (Master Key untuk semua AI Gratis & OP)
+openrouter_keys_raw = os.getenv("OPENROUTER_API_KEYS", "")
+if not openrouter_keys_raw:
+    openrouter_keys_raw = os.getenv("OPENROUTER_API_KEY", "")
+
+for k in openrouter_keys_raw.split(','):
+    clean_k = k.replace('\n', '').replace('\r', '').replace('"', '').strip()
+    if clean_k:
+        providers.append({"type": "openrouter", "client": clean_k})  # Simpan key-nya langsung
 
 SYSTEM_PROMPT = """
 You are a data parser specialized in Indonesian sociopolitical nuances.
@@ -84,6 +95,22 @@ def call_llm_api(prompt_text):
             response_format={"type": "json_object"}
         )
         return response.choices[0].message.content
+    elif provider["type"] == "openrouter":
+        headers = {
+            "Authorization": f"Bearer {provider['client']}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "meta-llama/llama-3.3-70b-instruct:free",
+            "messages": [
+                {"role": "user", "content": prompt_text}
+            ],
+            "temperature": 0.1
+        }
+        resp = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
+        if resp.status_code != 200:
+            raise Exception(f"OpenRouter Error {resp.status_code}: {resp.text}")
+        return resp.json()["choices"][0]["message"]["content"]
 
 def process_batch_with_llm(batch_df):
     """Formats the batch and sends it to the LLM."""

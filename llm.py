@@ -75,14 +75,11 @@ def process_batch_with_llm(batch_df):
                 results = json.loads(response_text)
             return results
         except json.JSONDecodeError as e:
-            print(f"Failed to parse JSON response from LLM: {e}")
-            print(f"Raw Response: {response_text}")
-            return []
+            raise Exception(f"Failed to parse JSON response: {e}\nRaw Response: {response_text}")
             
     except Exception as e:
-        print(f"LLM API request failed after retries: {e}")
         # Log failed rows
         with open("error_log.txt", "a") as f:
             failed_ids = [p['row_id'] for p in payload]
             f.write(f"Failed to process batch with row_ids: {failed_ids}. Error: {e}\n")
-        return []
+        raise Exception(f"API Error: {e}")

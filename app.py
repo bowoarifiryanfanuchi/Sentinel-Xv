@@ -121,7 +121,9 @@ if uploaded_file is not None and not st.session_state.analysis_done:
                             
                             all_results.append(row_data)
                     except Exception as e:
-                        pass # Jika ada error ekstrem, lewati saja batch ini
+                        st.error(f"Gagal memproses batch: {str(e)}")
+                        # Teruskan eksekusi dengan data kosong agar ketahuan
+                        pass
                     
                     completed_rows += len(batch_df)
                     progress_bar.progress(min(completed_rows / total_rows, 1.0))

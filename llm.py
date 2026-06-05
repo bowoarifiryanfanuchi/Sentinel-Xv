@@ -2,7 +2,7 @@ import os
 import json
 from google import genai
 from google.genai import types
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, RetryError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -32,7 +32,7 @@ Expected Schema per object:
 }
 """
 
-@retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5))
+@retry(wait=wait_exponential(multiplier=2, min=5, max=65), stop=stop_after_attempt(8))
 def call_llm_api(prompt_text):
     """Calls the Gemini API with retry logic."""
     response = client.models.generate_content(
@@ -77,6 +77,13 @@ def process_batch_with_llm(batch_df):
         except json.JSONDecodeError as e:
             raise Exception(f"Failed to parse JSON response: {e}\nRaw Response: {response_text}")
             
+    except RetryError as re:
+        err_msg = re.last_attempt.exception()
+        # Log failed rows
+        with open("error_log.txt", "a") as f:
+            failed_ids = [p['row_id'] for p in payload]
+            f.write(f"Failed to process batch with row_ids: {failed_ids}. Error: {err_msg}\n")
+        raise Exception(f"API Limit/Error: {err_msg}")
     except Exception as e:
         # Log failed rows
         with open("error_log.txt", "a") as f:

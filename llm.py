@@ -12,8 +12,8 @@ raw_api_key = os.getenv("GEMINI_API_KEY", "")
 clean_api_key = raw_api_key.replace('\n', '').replace('\r', '').replace('"', '').strip()
 client = genai.Client(api_key=clean_api_key)
 
-# Use Gemini 2.5 Flash as the latest recommended model
-model_name = 'gemini-3.1-flash-lite'
+# Switch to Gemini 2.0 Flash to bypass the 500 requests/day limit on the previous model
+model_name = 'gemini-2.0-flash'
 
 SYSTEM_PROMPT = """
 You are a data parser specialized in Indonesian sociopolitical nuances.
@@ -72,10 +72,19 @@ def process_batch_with_llm(batch_df):
             end_idx = response_text.rfind(']')
             if start_idx != -1 and end_idx != -1:
                 clean_json = response_text[start_idx:end_idx+1]
-                results = json.loads(clean_json)
+                # Smart Trimmer: Gunting kurung berlebih dari belakang jika gagap
+                while clean_json:
+                    try:
+                        results = json.loads(clean_json)
+                        return results
+                    except json.JSONDecodeError:
+                        end_idx = clean_json.rfind(']', 0, -1)
+                        if end_idx == -1:
+                            raise
+                        clean_json = clean_json[:end_idx+1]
             else:
                 results = json.loads(response_text)
-            return results
+                return results
         except json.JSONDecodeError as e:
             raise Exception(f"Failed to parse JSON response: {e}\nRaw Response: {response_text}")
             

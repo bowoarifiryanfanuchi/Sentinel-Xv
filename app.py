@@ -90,8 +90,8 @@ if uploaded_file is not None and not st.session_state.analysis_done:
             
             status_text.markdown(f"**Status:** Memulai analisis paralel untuk {total_rows} baris...")
             
-            # PROSES BATCH SECARA PARALEL (Maksimal 3 jalur sekaligus)
-            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            # PROSES BATCH SECARA PARALEL (Maksimal 15 jalur sekaligus karena kita pakai Pooling)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
                 # Mengirim semua batch ke AI secara bersamaan
                 future_to_batch = {executor.submit(process_batch_with_llm, batch): batch for batch in batches}
                 

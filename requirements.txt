@@ -11,3 +11,4 @@ plotly
 wordcloud
 matplotlib
 pyvis
+groq

@@ -99,11 +99,11 @@ if uploaded_file is not None and not st.session_state.analysis_done:
                     batch_df = future_to_batch[future]
                     try:
                         llm_results = future.result()
-                        llm_dict = {item.get('row_id'): item for item in llm_results}
+                        llm_dict = {str(item.get('row_id')): item for item in llm_results}
                         
                         for _, row in batch_df.iterrows():
-                            row_id = row['row_id']
-                            res = llm_dict.get(row_id, {})
+                            row_id_str = str(row['row_id'])
+                            res = llm_dict.get(row_id_str, {})
                             
                             row_data = row.to_dict()
                             row_data['Sentiment'] = res.get('primary_sentiment', 'Netral')

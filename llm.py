@@ -90,7 +90,7 @@ def call_llm_api(prompt_text):
             messages=[
                 {"role": "user", "content": prompt_text}
             ],
-            model="llama3-70b-8192",
+            model="llama-3.3-70b-versatile",
             temperature=0.1,
             response_format={"type": "json_object"}
         )
@@ -104,8 +104,7 @@ def call_llm_api(prompt_text):
         # OpenRouter punya akses gratis ke banyak model elit. Kita acak agar tidak gampang limit!
         openrouter_models = [
             "meta-llama/llama-3.3-70b-instruct:free",
-            "qwen/qwen-2.5-72b-instruct:free",
-            "google/gemini-2.0-flash-exp:free"
+            "qwen/qwen-2.5-72b-instruct:free"
         ]
         
         data = {
